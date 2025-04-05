@@ -1,0 +1,13 @@
+Frontend
+========
+
+cd E:\projetos\lexsum\frontend\
+npm run dev
+
+
+Backend
+=======
+
+cd E:\projetos\lexsum\backend
+\venv\Scripts\activate
+uvicorn main:app --reload

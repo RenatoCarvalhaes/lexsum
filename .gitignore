@@ -1,0 +1,8 @@
+# Arquivo de environments
+.env
+
+# Arquivo visual code
+*.code-workspace
+
+# virtual environment
+venv
