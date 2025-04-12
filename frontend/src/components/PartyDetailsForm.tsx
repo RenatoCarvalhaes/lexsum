@@ -4,10 +4,10 @@ import { Wand2, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 interface PartyDetailsFormProps {
   type: 'author' | 'defendant';
   pendingDocuments: string[];
-  onSave: (type: 'author' | 'defendant', data: Record<string, string>) => void;
+  onSave: (type: 'author' | 'defendant', data: Record<string, PartyData>) => void;
 }
 
-interface PartyData {
+export interface PartyData {
   name: string;
   nationality: string;
   maritalStatus: string;
@@ -131,7 +131,7 @@ function PartyDetailsForm({ type, pendingDocuments, onSave }: PartyDetailsFormPr
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <div className="space-y-8">
         {pendingDocuments.map(document => (
           <div key={document} className="bg-gray-50 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
@@ -356,13 +356,14 @@ function PartyDetailsForm({ type, pendingDocuments, onSave }: PartyDetailsFormPr
 
         <div className="flex justify-end">
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Salvar Dados
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
