@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator
-# from typing import Optional
+from typing import Optional
 import re
 # from datetime import datetime
 
@@ -51,3 +51,7 @@ class VerificacaoInput(BaseModel):
 class LoginData(BaseModel):
     email: str
     senha: str
+
+
+class PartySearchResponse(BaseModel):
+    name: Optional[str]

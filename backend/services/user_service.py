@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from models import Usuarios
+from models.models import Usuarios
 # from utils.security import hash_senha
 # from utils.validators import validar_email
 from fastapi import HTTPException
-from db import SessionLocal
+from core.db import SessionLocal
 
 def usuario_existe(email: str) -> bool:
     db = SessionLocal()

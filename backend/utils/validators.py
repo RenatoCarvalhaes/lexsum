@@ -15,3 +15,14 @@ def validar_telefone(telefone: str) -> str:
             detail="Telefone deve ter 10 ou 11 dígitos (incluindo DDD)"
         )
     return digits
+
+def clean_document(document: str) -> str:
+    return re.sub(r'\D', '', document)
+
+def is_cpf(document: str) -> bool:
+    digits = clean_document(document)
+    return len(digits) == 11
+
+def is_cnpj(document: str) -> bool:
+    digits = clean_document(document)
+    return len(digits) == 14

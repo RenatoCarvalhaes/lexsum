@@ -2,10 +2,10 @@ from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from schemas import UserCreate, VerificacaoInput, LoginData
-from db import SessionLocal
+from schemas.schemas import UserCreate, VerificacaoInput, LoginData
+from core.db import SessionLocal
 from sqlalchemy.orm import Session
-from models import Usuarios
+from models.models import Usuarios
 from datetime import datetime, timedelta
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -17,12 +17,14 @@ from utils.validators import validar_email
 from services.user_service import usuario_existe, enviar_email_verificacao, criar_usuario
 from utils.security import create_access_token, get_current_user, gerar_codigo_verificacao, hash_senha
 from services.logger import logger
+from routers import party
 
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
 router = APIRouter()
 
+app.include_router(party.router, prefix="/api")
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
