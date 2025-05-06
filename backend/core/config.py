@@ -17,9 +17,15 @@ class Settings(BaseSettings):
     MYSQL_PASSWORD_ADMIN: str = Field(..., env="MYSQL_PASSWORD_ADMIN")
     MYSQL_HOST: str = Field(..., env="MYSQL_HOST")
     MYSQL_DATABASE: str = Field(..., env="MYSQL_DATABASE")
-
+    
     # Token para autenticar requisições internas (ex: /party)
     SECRET_API_KEY: str
+
+    # Endereço API
+    VITE_API_URL: str = Field(..., env="VITE_API_URL")
+
+    # Chave OpenAI
+    OPENAI_KEY: str = Field(..., env="OPENAI_KEY")
 
     # URL de conexão MySQL já montada
     @property

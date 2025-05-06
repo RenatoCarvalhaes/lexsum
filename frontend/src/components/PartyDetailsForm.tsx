@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Wand2, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+const API_URL = import.meta.env.VITE_API_URL;
+
 
 interface PartyDetailsFormProps {
   type: 'author' | 'defendant';
@@ -33,6 +35,7 @@ function PartyDetailsForm({ type, pendingDocuments, onSave }: PartyDetailsFormPr
   const [freeformText, setFreeformText] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, Record<string, string>>>({});
 
   const maritalStatusOptions = [
     'Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'Separado(a) Judicialmente'
@@ -51,6 +54,17 @@ function PartyDetailsForm({ type, pendingDocuments, onSave }: PartyDetailsFormPr
         [field]: value
       }
     }));
+
+    // Clear error when field is filled
+    if (value.trim()) {
+      setErrors(prev => ({
+        ...prev,
+        [document]: {
+          ...prev[document],
+          [field]: ''
+        }
+      }));
+    }
   };
 
   const handleAddressChange = (document: string, field: string, value: string) => {
@@ -75,42 +89,111 @@ function PartyDetailsForm({ type, pendingDocuments, onSave }: PartyDetailsFormPr
 
   const processFreeformText = async (document: string) => {
     setIsProcessing(prev => ({ ...prev, [document]: true }));
-    
+  
     try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Example parsed data (in production, this would come from the AI service)
-      const parsedData = {
-        name: 'João da Silva',
-        nationality: 'Brasileiro',
-        maritalStatus: 'Casado(a)',
-        profession: 'Advogado',
-        rg: '12.345.678-9',
-        orgaoExpedidor: 'SSP/SP',
+      // 1) envia o texto livre para o backend
+      const res = await fetch(`${API_URL}/api/parse-party-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: freeformText[document] })
+      });
+  
+      if (!res.ok) {
+        console.error("Erro ao chamar o parse:", await res.text());
+        return;
+      }
+  
+      // lê o XML retornado
+      let xmlText = await res.text();
+  
+      // limpeza de code fences e trim de espaços/brqs de linha
+      xmlText = xmlText
+        .replace(/^```(?:xml)?\s*/, "")
+        .replace(/\s*```$/, "")
+        .trim();
+  
+      console.log("[XML RECEBIDO]", xmlText);
+  
+      // 2) faz o parsing do XML
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+  
+      // 3) checa se houve erro no parsing
+      const parserErrors = xmlDoc.getElementsByTagName("parsererror");
+      if (parserErrors.length) {
+        console.error("ParserError no XML:", parserErrors[0].textContent);
+        return;
+      }
+  
+      // helper para extrair cada tag
+      const getTag = (tag: string) =>
+        xmlDoc.getElementsByTagName(tag)[0]?.textContent?.trim() || "";
+  
+      // 4) monta o objeto PartyData
+      const parsedData: PartyData = {
+        name: getTag("name"),
+        nationality: getTag("nationality"),
+        maritalStatus: getTag("maritalStatus"),
+        profession: getTag("profession"),
+        rg: getTag("rg"),
+        orgaoExpedidor: getTag("orgaoExpedidor"),
+        dataExpedicao: getTag("dataExpedicao"),
+        email: getTag("email"),
+        phone: getTag("phone"),
         address: {
-          street: 'Rua das Flores',
-          number: '123',
-          complement: 'Apto 45',
-          neighborhood: 'Centro',
-          city: 'São Paulo',
-          state: 'SP',
-          cep: '01234-567'
+          street: getTag("street"),
+          number: getTag("number"),
+          complement: getTag("complement"),
+          neighborhood: getTag("neighborhood"),
+          city: getTag("city"),
+          state: getTag("state"),
+          cep: getTag("cep"),
         }
       };
-
+  
+      console.log("[PARSED DATA]", parsedData);
+  
+      // 5) atualiza o estado
       setFormData(prev => ({
         ...prev,
         [document]: parsedData
       }));
+  
+    } catch (err) {
+      console.error("Falha no processamento:", err);
     } finally {
       setIsProcessing(prev => ({ ...prev, [document]: false }));
     }
   };
+   
+  const validateForm = (document: string) => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData[document]?.name?.trim()) {
+      newErrors.name = 'Nome Completo é obrigatório';
+    }
+
+    setErrors(prev => ({
+      ...prev,
+      [document]: newErrors
+    }));
+
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(type, formData);
+    
+    let isValid = true;
+    pendingDocuments.forEach(document => {
+      if (!validateForm(document)) {
+        isValid = false;
+      }
+    });
+
+    if (isValid) {
+      onSave(type, formData);
+    }
   };
 
   if (pendingDocuments.length === 0) return null;
@@ -182,14 +265,20 @@ function PartyDetailsForm({ type, pendingDocuments, onSave }: PartyDetailsFormPr
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nome Completo
+                      Nome Completo <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData[document]?.name || ''}
                       onChange={(e) => handleChange(document, 'name', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${
+                        errors[document]?.name ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      required
                     />
+                    {errors[document]?.name && (
+                      <p className="mt-1 text-sm text-red-600">{errors[document].name}</p>
+                    )}
                   </div>
 
                   <div>
